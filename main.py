@@ -39,9 +39,14 @@ console = Console(
     highlighter=AquahackHighlighter()
 )
 
+speed_control = 1.0
+try:
+    speed_control = float(sys.argv[1])
+except Exception:
+    pass
 
 def type_print(text, style='', speed=1):
-    speed = ( speed * 0.8 ) / float(sys.argv[1])
+    speed = ( speed * 0.8 ) / speed_control
     text += '\n'
     for char in text:
         console.print(char, style=style, end='')
@@ -103,15 +108,17 @@ Go ahead and run a scan with nmap on 10.0.12.119/19.''', good),
     3: StoryText('''\
 Alright, looks like we've found our target.
 We won't be able to get anywhere without credentials though, so I've prepared a little script to help.
-You'll need to make it executable ( +x ) first though.''', good),
+Just download it from https://github.com/rjboas/aquahack/tree/main/extra_data/script.sh using wget''', good),
     4: StoryText('''\
-Yep, looks good now. Go ahead and run it.''', good),
+Don't forget that to make it executable (note: use +x style).''', good),
     5: StoryText('''\
+Yep, looks good now. Go ahead and run it.''', good),
+    6: StoryText('''\
 Ahaha, piece of cake.
 
 We'd best not delay, so go on and ssh into their root user from here...
 Oh, it looks like their IP went off screen, I believe it was 10.0.14.87.''', good),
-    6: StoryText('''\
+    7: StoryText('''\
 
 
 Wow, you really though that'd work?
@@ -121,9 +128,9 @@ I'd love to just leave you be, but that script of yours is a litte troublesome.
 So if you could hold on for a moment--
 
  > rm -rf /''', evil),
-    7: StoryText('''\n\n\nWarning: System integrity compromised.''', cmd_output),
-    8: StoryText(''' > cat /dev/urandom | sudo tee /proc/sysrq-trigger''', evil),
-    9: StoryText(kpanic, cmd_output),
+    8: StoryText('''\n\n\nWarning: System integrity compromised.''', cmd_output),
+    9: StoryText(''' > cat /dev/urandom | sudo tee /proc/sysrq-trigger''', evil),
+    10: StoryText(kpanic, cmd_output),
 }
 
 correct_commands = {
@@ -144,10 +151,17 @@ PORT     STATE SERVICE
 22/tcp   open  ssh
 
 Nmap done: 1 host up scanned in 1.00 second'''),
-    3: ('chmod +x ./script.sh', ''),
-    4: ('./script.sh', 'Bruteforcing n cases...\n...\n...\n\nPredicting possible permutations...\n...\n...\n\nSatisfying predicate...\n...\n...\n\nPassword found! ********'),
-    5: ('ssh root@10.0.14.87', 'root@10.0.14.87\'s password: ********'),
-    6: ('exit', '')
+    3: ('wget https://github.com/rjboas/aquahack/tree/main/extra_data/script.sh', '''
+Resolving github.com...
+Connetcting to github.com... connected.
+HTTP request sent, awaiting response... 200 OK
+Saving to: 'script.sh'
+
+'script.sh' saved'''),
+    4: ('chmod +x ./script.sh', ''),
+    5: ('./script.sh', 'Bruteforcing n cases...\n...\n...\n\nPredicting possible permutations...\n...\n...\n\nSatisfying predicate...\n...\n...\n\nPassword found! ********'),
+    6: ('ssh root@10.0.14.87', 'root@10.0.14.87\'s password: ********'),
+    7: ('exit', '')
 }
 
 def do_pass():
@@ -155,7 +169,6 @@ def do_pass():
 
 misc_commands = {
     'cat /dev/urandom | sudo tee /proc/sysrq-trigger': (kpanic, exit),
-    'ls': ('.   ..  script.sh', do_pass),
     'cat': ('No pets allowed.', do_pass),
     'sleep': ('No rest for the wicked', do_pass),
     'sudo': ('You are not in the sudoers file.\n This incident will be reported.\n\nsee https://xkcd.com/838/\n', do_pass),
@@ -171,8 +184,6 @@ def check_and_process_command(command, i):
     command = command.strip()
 
     sleep(0.4)
-
-
 
     if correct_commands[i][0] == command \
             or correct_commands[i][0].replace('./', '') == command:
@@ -200,7 +211,7 @@ def main():
         for i, line in prompts.items():
             sleep(1)
             line.print()
-            if i > 5:
+            if i > 6: # If we are past the point where the evil person takes control
                 continue
             command = Prompt.ask(prompt='[blinking white] user@aquahack ~ ')
             while check_and_process_command(command, i) != True:
