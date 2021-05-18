@@ -46,7 +46,7 @@ except Exception:
     pass
 
 def type_print(text, style='', speed=1):
-    speed = ( speed * 0.8 ) / speed_control
+    speed = ( speed * 0.9 ) / speed_control
     text += '\n'
     for char in text:
         console.print(char, style=style, end='')
@@ -87,8 +87,13 @@ cmd_output = Character('cmd.output', speed=0)
 good = Character('prompt.friendly')
 evil = Character('prompt.evil')
 
-with open('extra_data/startup.txt', 'r') as file:
-    startup = file.read()
+
+startup = ''
+try:
+    sys.argv[2]
+except Exception:
+    with open('extra_data/startup.txt', 'r') as file:
+        startup = file.read()
 
 with open('extra_data/kpanic.txt', 'r') as file:
     kpanic = file.read()
@@ -185,6 +190,9 @@ def check_and_process_command(command, i):
 
     sleep(0.4)
 
+    if command == 'skip':
+        return True
+
     if correct_commands[i][0] == command \
             or correct_commands[i][0].replace('./', '') == command:
         for line in correct_commands[i][1].split('\n'):
@@ -205,22 +213,36 @@ def check_and_process_command(command, i):
 
     return False
 
+def handle_ctrl_c():
+    yn = input('\nWould you like to exit? y/n: ')
+    if yn.lower() == 'y' or yn.lower() == 'yes':
+        return 'stop'
+    return
 
-def main():
-    try:
-        for i, line in prompts.items():
-            sleep(1)
-            line.print()
-            if i > 6: # If we are past the point where the evil person takes control
-                continue
-            command = Prompt.ask(prompt='[blinking white] user@aquahack ~ ')
-            while check_and_process_command(command, i) != True:
-                command = Prompt.ask(
-                    prompt='[blinking white] user@aquahack ~ ')
-
-    except KeyboardInterrupt as e:
+def mainloop(i, line):
+    sleep(1)
+    line.print()
+    if i > 6: # If we are past the point where the evil person takes control
         return
 
+    command = Prompt.ask(prompt='[blinking white] user@aquahack ~ ')
+    while check_and_process_command(command, i) != True:
+        command = Prompt.ask(
+            prompt='[blinking white] user@aquahack ~ ')
+
+def main():
+    for i, line in prompts.items():
+        try_again = True
+        while try_again:
+            try:
+                mainloop(i, line)
+            except KeyboardInterrupt:
+                if handle_ctrl_c() == 'stop':
+                    return
+                else:
+                    try_again = True
+            else:
+                try_again = False
 
 if __name__ == '__main__':
     main()
