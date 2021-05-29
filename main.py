@@ -6,6 +6,28 @@ from rich.prompt import Prompt
 from time import sleep
 import sys
 
+# Support using mpv from a directory next to the script
+try:
+    import os
+    os.environ["PATH"] = os.path.dirname(__file__) + '\mpv' + os.pathsep + os.environ["PATH"]
+    import mpv
+except Exception as e:
+    print('''Warning: an error occurred importing MPV.
+Audio will not be played.
+Error: ''', str(e))
+
+class Dummy:
+    def __init__(*args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __getattr__(self, *args, **kwargs):
+        return self
+
+player = Dummy()
+
 theme = Theme({
     'prompt.user': 'bright_white',
     'cmd.output': 'white',
@@ -115,7 +137,7 @@ Alright, looks like we've found our target.
 We won't be able to get anywhere without credentials though, so I've prepared a little script to help.
 Just download it from https://github.com/rjboas/aquahack/tree/main/extra_data/script.sh using wget''', good),
     4: StoryText('''\
-Don't forget that to make it executable (note: use +x style).''', good),
+Don't forget to make it executable (note: use +x style).''', good),
     5: StoryText('''\
 Yep, looks good now. Go ahead and run it.''', good),
     6: StoryText('''\
@@ -126,9 +148,9 @@ Oh, it looks like their IP went off screen, I believe it was 10.0.14.87.''', goo
     7: StoryText('''\
 
 
-Wow, you really though that'd work?
+Wow, you really thought that'd work?
 Looks like you'll need to step up your game if you don't want to fall for my little tricks.
-I'd love to just leave you be, but that script of yours is a litte troublesome.
+I'd love to just leave you be, but that script of yours is a little troublesome.
 
 So if you could hold on for a moment--
 
@@ -220,8 +242,23 @@ def handle_ctrl_c():
     return
 
 def mainloop(i, line):
+    if i == 7:
+        player.stop()
+        player.start = 28
+        # player.start = 10
+        # player.end = 45
+        player.play('extra_data/tense.mp3')
+        sleep(3)
+        print('...')
+        sleep(3)
+        print('...')
+        sleep(3)
+        print('...')
+        sleep(5)
+
     sleep(1)
     line.print()
+
     if i > 6: # If we are past the point where the evil person takes control
         return
 
@@ -229,6 +266,8 @@ def mainloop(i, line):
     while check_and_process_command(command, i) != True:
         command = Prompt.ask(
             prompt='[blinking white] user@aquahack ~ ')
+    if i == 0:
+        player.pause = False
 
 def main():
     for i, line in prompts.items():
@@ -245,4 +284,10 @@ def main():
                 try_again = False
 
 if __name__ == '__main__':
+    print('Loading...')
+    player = mpv.MPV(ytdl=True, vid='no', volume=50)
+    player.play('extra_data/main.mp3')
+    player.wait_until_playing()
+    player.pause = True
     main()
+    player.terminate()
